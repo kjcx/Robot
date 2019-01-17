@@ -15,11 +15,11 @@ type RespWs struct {
 	Data map[string]interface{}
 }
 //ws连接
-func Ws(){
+func Ws(orgin string){
 	//发起连接
 	url := "ws://ss.wmy2.com:8282"
 	fmt.Println(url)
-	ws,err := websocket.Dial(url, "", "/")
+	ws,err := websocket.Dial(url, "", "/" + orgin)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -36,7 +36,12 @@ func HeartbeatSend(conn *websocket.Conn) {
 		websocket.Message.Send(conn, "ping")
 	}
 }
-
+type Clients struct {
+	Origin string
+	ClienId string
+}
+var Client = make(chan *Clients)
+//var ChanClients chan *Clients
 func ForRead(ws *websocket.Conn) {
 	for {
 		var msg1 = make([]byte,2048)
@@ -55,9 +60,20 @@ func ForRead(ws *websocket.Conn) {
 		json.Unmarshal(msg1[:n],&r)
 		fmt.Println(r,r.Data["client_id"])
 		if r.Code == 9002 {
-			Client_id = r.Data["client_id"].(string)
+			fmt.Println("9002",r.Message)
+			Client_id := r.Data["client_id"].(string)
+			fmt.Println(ws.Config().Origin,Client_id)
+			c :=&Clients{}
+			c.Origin =  ws.Config().Origin.String()[1:]
+			c.ClienId = Client_id
+			Client <- c
+		}else if r.Code == 9003 {
+			fmt.Println("9005",r.Message)
+		} else if r.Code == 9005 {
+			fmt.Println("9005",r.Message)
+		}else if r.Code == 9009 {
+			fmt.Println("9009",r.Message)
 		}
-		fmt.Println(Client_id)
 
 	}
 }
