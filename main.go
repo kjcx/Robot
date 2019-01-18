@@ -2,13 +2,13 @@ package main
 
 import (
 	"Robot/robot_common"
+	"ckp/ckp_common"
 	"math/rand"
 	"net/http"
-	"strconv"
 	"time"
 )
 import "fmt"
-var Bet = []string{"10","50","100","500","1000"}
+var Bet = []string{"10","50","100","50","500","10","1000","10","100","50","1000","10","100","50","10"}
 func main(){
 	//1读取账号
 	accounts := robot_common.File("./robot_common/account.txt")
@@ -17,10 +17,11 @@ func main(){
 	for _,account := range accounts{
 		robot_common.Ws(account.UserName)
 	}
+	//执行chan读取下注信息
+	go RunOnBet()
 	go func() {
 		for   {
 			c := <- robot_common.Client
-			fmt.Errorf("ccc",c)
 			t := robot_common.Clients{c.Origin,c.ClienId}
 			go Token(t)
 			fmt.Println(t)
@@ -28,7 +29,6 @@ func main(){
 	}()
 	fmt.Println("ssss")
 	time.Sleep(2000*time.Second)
-	fmt.Println(robot_common.Client_id)
 	// 投注
 	http.ListenAndServe(":8001", nil)
 }
@@ -46,26 +46,61 @@ func Token(c robot_common.Clients){
 		fmt.Println("进入房间",c.Origin,c.ClienId)
 		resp_room_index := robot_common.Index(c.ClienId,Token,"1")
 		fmt.Println(resp_room_index)
-		for  {
-			var zone = "2"
-			rand.Seed(time.Now().Unix())
-			n := rand.Intn(5)
-			fmt.Println("n",n)
-			if n == 0 {
-				zone = "1"
-			}else{
-				nn :=rand.Intn(5)
-				zone = strconv.Itoa(nn)
+
+		go func() {
+			for {
+				PreOnBet(resp_login.Token,c)
+				time.Sleep(30*time.Second)
 			}
-			time.Sleep(time.Second *1)
-			resp_room := robot_common.OnBet(Bet[n],resp_login.Token,zone,c.ClienId)
-			fmt.Println(resp_room)
-			if resp_room.Code == 200 {
-				time.Sleep(150 * time.Second)
-			}
-			time.Sleep( 10 *time.Second)
-		}
+		}()
 
 	}
 	// 投注
+}
+/**
+	队列下单
+ */
+func PreOnBet(Token string,c robot_common.Clients){
+	fmt.Println("总金额:",robot_common.BetSum)
+	if robot_common.BetSum <=50000 {
+		//区域随机
+		Zone := rand.Intn(6)
+		if Zone != 0{
+			//下注金额随机
+			BetRand := rand.Intn(14)
+			bf := &robot_common.BetInfo{}
+			bf.Token = Token
+			bf.Zone = ckp_common.IntToString(Zone)
+			bf.C = c
+			bf.Money = ckp_common.StringToInt(Bet[BetRand])
+			nn := rand.Intn(160)
+			time.Sleep(time.Duration(nn) *time.Second)
+			robot_common.BetSumChan <- bf
+		}
+
+	}
+
+
+}
+/**
+	执行下注
+ */
+func RunOnBet(){
+	for   {
+		select {
+		case BetInfo := <-robot_common.BetSumChan:
+			fmt.Println("总金额:",robot_common.BetSum,BetInfo)
+			if robot_common.BetSum <=50000 {
+				resp_room := robot_common.OnBet(ckp_common.IntToString(BetInfo.Money),BetInfo.Token,BetInfo.Zone,BetInfo.C.ClienId)
+				fmt.Println(resp_room)
+				if resp_room.Code == 200 {
+					fmt.Println("下注成功")
+					robot_common.BetSum += BetInfo.Money
+				}
+			}else{
+				fmt.Println("超过下载金额")
+			}
+			break
+		}
+	}
 }

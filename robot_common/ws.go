@@ -41,6 +41,7 @@ type Clients struct {
 	ClienId string
 }
 var Client = make(chan *Clients)
+
 //var ChanClients chan *Clients
 func ForRead(ws *websocket.Conn) {
 	for {
@@ -70,8 +71,15 @@ func ForRead(ws *websocket.Conn) {
 		}else if r.Code == 9003 {
 			fmt.Println("9005",r.Message)
 		} else if r.Code == 9005 {
-			fmt.Println("9005",r.Message)
+			start_countdown := r.Data["start_countdown"]
+			lottery_id := r.Data["lottery_id"]
+			fmt.Println("9005",lottery_id,start_countdown,r.Message)
 		}else if r.Code == 9009 {
+			//开奖更新下载金额限制
+			lottery_id := r.Data["lottery_id"]
+			if lottery_id == 1 {
+				BetSum = 0
+			}
 			fmt.Println("9009",r.Message)
 		}
 
