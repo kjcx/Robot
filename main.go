@@ -127,7 +127,7 @@ func Select(){
 	s := Site{}
 	for  {
 		fmt.Println("RobotNumRobotNumRobotNum")
-		GormDb.Raw("select robot_num from zc_site where site_id = 1").Find(&s)
+		GormDb.Raw("select robot_num,robot_money from zc_site where site_id = 1").Find(&s)
 		fmt.Println("RobotNum",s.RobotNum)
 		if RobotNum == 0 {
 			RobotNum = s.RobotNum
@@ -136,9 +136,8 @@ func Select(){
 			cmd := fmt.Sprintf("/www/robot.sh %d",RobotNum)
 			exec_shell(cmd)
 		}
-		if RobotMoney == 0 {
-			RobotMoney = s.RobotMoney
-		}
+		RobotMoney = s.RobotMoney
+		fmt.Println("RobotMoney:",RobotMoney)
 		time.Sleep(10*time.Second)
 	}
 }
