@@ -44,7 +44,7 @@ func Token(c robot_common.Clients){
 		fmt.Println(resp_login)
 		//4进入房间
 		fmt.Println("进入房间",c.Origin,c.ClienId)
-		resp_room_index := robot_common.Index(c.ClienId,Token,"1")
+		resp_room_index := robot_common.Index(c.ClienId,Token,"2")
 		fmt.Println(resp_room_index)
 
 		go func() {
