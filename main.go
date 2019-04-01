@@ -62,7 +62,9 @@ func init(){
 	GormDb.Debug()
 	//defer GormDb.Close()
 }
-var nums  = flag.Int("num", 50, "robot num")
+var nums  = flag.Int64("num", -1, "robot num")
+var siteid  = flag.String("id", "49", "site id")
+
 func main(){
 	flag.Parse()
 	u := User{}
@@ -70,8 +72,38 @@ func main(){
 	data := []*User{}
 	//定义一个int型字符
 	fmt.Println(*nums,*nums)
+	var num = *nums
+	var siteid = *siteid
+	var addr = ":8004"
+	var Offset = 0
+	if siteid == "49"{
+		Offset = 450
+		addr = ":8049"
+	}else if siteid == "57"{
+		Offset = 600
+		addr = ":8057"
+	}else if siteid == "65"{
+		Offset = 750
+		addr = ":8065"
+	}else if siteid == "1"{
+		Offset = 0
+		addr = ":8001"
+	}else if siteid == "9"{
+		Offset = 150
+		addr = ":8009"
+	}else if siteid == "17"{
+		Offset = 300
+		addr = ":8017"
+	}
+	var sql = fmt.Sprintf("select robot_num,robot_money from zc_site where site_id = %s",siteid)
+	fmt.Println("sql:",sql)
+	if num == -1 {
+		s := Site{}
+		GormDb.Raw(sql).Find(&s)
+		num = s.RobotNum
+	}
 	//time.Sleep(10*time.Second)
-	GormDb.Where(&u).Limit(*nums).Find(&data)
+	GormDb.Where(&u).Limit(num).Offset(Offset).Find(&data)
 	fmt.Println(data)
 	//1读取账号
 	//accounts := robot_common.File("./robot_common/account.txt")
@@ -84,7 +116,7 @@ func main(){
 	//	robot_common.Ws(account.UserName)
 	//}
 	fmt.Println("ssss")
-	go Select()
+	go Select(sql)
 	go func() {
 		for{
 			fmt.Println("在线人数:", len(robot_common.ClientOnline),robot_common.Game1OnBetStatus)
@@ -114,26 +146,27 @@ func main(){
 	fmt.Println("ssss")
 	time.Sleep(2000*time.Second)
 	// 投注
-	http.ListenAndServe(":8001", nil)
+	http.ListenAndServe(addr, nil)
+}
+type Site struct{
+	RobotNum int64
+	RobotMoney int64
 }
 var RobotNum int64
 var RobotMoney int64
-func Select(){
-
-	type Site struct{
-		RobotNum int64
-		RobotMoney int64
-	}
+func Select(sql string){
 	s := Site{}
 	for  {
 		fmt.Println("RobotNumRobotNumRobotNum")
-		GormDb.Raw("select robot_num from zc_site where site_id = 1").Find(&s)
+		GormDb.Raw(sql).Find(&s)
 		fmt.Println("RobotNum",s.RobotNum)
+		//exec_shell("ps -aux |grep Robot17|grep -v grep")
 		if RobotNum == 0 {
 			RobotNum = s.RobotNum
 		}else if RobotNum > 0 && RobotNum != s.RobotNum {
 			RobotNum = s.RobotNum
-			cmd := fmt.Sprintf("/www/robot.sh %d",RobotNum)
+			cmd := fmt.Sprintf("/www/robot_saiche.sh %d %s",RobotNum,*siteid)
+			fmt.Println(cmd)
 			exec_shell(cmd)
 		}
 		if RobotMoney == 0 {
@@ -153,7 +186,7 @@ func Token(c robot_common.Clients){
 		fmt.Println(resp_login)
 		//4进入房间
 		fmt.Println("进入房间",c.Origin,c.ClienId)
-		resp_room_index := robot_common.Index(c.ClienId,Token,"1")
+		resp_room_index := robot_common.Index(c.ClienId,Token,*siteid)
 		fmt.Println(resp_room_index)
 
 		go func() {
@@ -177,7 +210,12 @@ func PreOnBet(Token string,c robot_common.Clients){
 	fmt.Println("总金额:",robot_common.BetSum)
 	if robot_common.BetSum <= int(RobotMoney) {
 		//区域随机
-		Zone := rand.Intn(6)
+		var Zone = 0
+		if *siteid == "57" || *siteid =="9" {
+			Zone = rand.Intn(7)
+		}else{
+			Zone = rand.Intn(6)
+		}
 		if Zone != 0{
 			//下注金额随机
 			BetRand := rand.Intn(14)
@@ -214,7 +252,7 @@ func RunOnBet(){
 					robot_common.Game1OnBetStatus = 0
 				}
 			}else{
-				fmt.Println("超过下载金额")
+				fmt.Println("超过下注金额",RobotMoney)
 			}
 			break
 		}

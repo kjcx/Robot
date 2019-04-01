@@ -87,7 +87,8 @@ func ForRead(ws *websocket.Conn) {
 				fmt.Println("9003",r.Message)
 			} else if r.Code == 9005 {
 				lottery_id := r.Data["lottery_id"]
-				//fmt.Println(lottery_id.(string) == "1")
+				fmt.Println(9005,lottery_id.(string) == "1")
+				fmt.Println(9005,lottery_id,lottery_id.(string) == "3")
 				start_countdown := r.Data["start_countdown"]
 				fmt.Printf("%T\n",start_countdown)
 				if lottery_id == "1" {
